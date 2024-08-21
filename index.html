@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetaMask Integration</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      margin: 0;
+      padding: 0;
+      background-image: url("https://c8.alamy.com/comp/2DPYBH7/vote-badge-eyeball-glossy-elegant-pink-round-button-abstract-illustration-2DPYBH7.jpg");
+      background-size: cover;
+      background-repeat: no-repeat;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 40px;
+      text-align: center;
+      background-color: rgba(255, 192, 203, 0.5); 
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      color: #ff69b4; 
+    }
+
+    button {
+      background-color: #ff69b4; 
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      font-size: 18px;
+      cursor: pointer;
+      margin: 10px;
+      border-radius: 8px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #ff1493; 
+    }
+
+    textarea {
+      width: calc(100% - 40px);
+      padding: 10px;
+      box-sizing: border-box;
+      margin: 10px auto;
+      display: block;
+      text-align: center;
+      border: 1px solid #ff69b4; 
+      border-radius: 8px;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .button-container > * {
+      margin: 10px;
+    }
+
+    img {
+      margin: 10px;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 5px;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .success {
+      background-color: #ffc0cb; /* Light pink for success message */
+      color: #ff69b4;
+      border: 1px solid #ffb6c1;
+    }
+
+    .error {
+      background-color: #ffb6c1; /* Light pink for error message */
+      color: #ff1493;
+      border: 1px solid #ff69b4;
+    }
+
+    #btn6 {
+      background-color: #ff69b4; /* Pink button for #btn6 */
+      margin-top: 1rem;
+    }
+
+    #userInput {
+      width: 60%;
+      margin: 10px auto;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.5.0/web3.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>MetaMask Vote!</h1>
+    <button onclick="connectMetaMask()">Connect MetaMask</button>
+    <button onclick="connectContract()">Connect Smart Contract</button>
+    <textarea id="userInput" placeholder="MetaMask Address of the voter"></textarea>
+    <button id="btn3" onclick="addYourVoteCoin(document.getElementById('userInput').value)" class="disabled">
+      Add Your Wallet Address
+    </button>
+
+    <div class="note" style="color: rgb(101, 28, 84); font-size: 1.2em; font-weight: bold">
+      Before you vote, connect to Metamask and the smart contract! Choose wisely!
+    </div>
+
+    <div class="button-container">
+      <div style="display: flex; align-items: center;">
+        <button id="btn4" onclick="vote1()" class="disabled">
+          Vote For Yoval
+        </button>
+        <img id="img1" src="https://png.pngtree.com/png-clipart/20230512/original/pngtree-election-vote-button-with-hand-png-image_9159293.png" alt="img1">
+      </div>
+      <div style="display: flex; align-items: center;">
+        <button id="btn5" onclick="vote2()" class="disabled">
+          Vote For Noam
+        </button>
+        <img id="img2" src="https://png.pngtree.com/png-clipart/20230512/original/pngtree-election-vote-button-with-hand-png-image_9159293.png" alt="img2">
+      </div>
+      <button id="btn6" onclick="burnMyVote()" class="disabled">
+        Burn My Vote
+      </button>
+    </div>
+
+    <div id="messageContainer"></div>
+
+    <a href="https://testnet.bscscan.com/address/0x579b074840eEED33e149279D69dCF0C8Fb461d44">Go to BNB to see the transaction!</a>
+  </div>
+
+    <script>
+      // Initialize Web3 and contract variables
+      let web3;
+      let contract; // Define contract at a higher scope
+      let userAddress;
+      let validAdress = false;
+      let privateKey;
+      let contractAddress = "0xfcb3c96637B40F7EaAc820bE4B0195301D5DAa1f"; // our contract address
+
+      // Function to connect to MetaMask
+      async function connectMetaMask() {
+        try {
+          console.log("Connecting to MetaMask...");
+
+          if (window.ethereum) {
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            web3 = new Web3(window.ethereum);
+            showMessage("Connected to MetaMask", "success");
+            console.log("Connected to MetaMask successfully.");
+          } else {
+            showMessage("MetaMask not found", "error");
+            console.error("MetaMask not found.");
+          }
+        } catch (error) {
+          showMessage(
+            "Error connecting to MetaMask: " + error.message,
+            "error"
+          );
+          console.error("Error connecting to MetaMask:", error);
+        }
+      }
+
+      // Function to connect to a smart contract
+
+      async function connectContract() {
+        try {
+          const abi = [
+          
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "allowance",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "needed",
+				"type": "uint256"
+			}
+		],
+		"name": "ERC20InsufficientAllowance",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "balance",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "needed",
+				"type": "uint256"
+			}
+		],
+		"name": "ERC20InsufficientBalance",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "approver",
+				"type": "address"
+			}
+		],
+		"name": "ERC20InvalidApprover",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "receiver",
+				"type": "address"
+			}
+		],
+		"name": "ERC20InvalidReceiver",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "ERC20InvalidSender",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			}
+		],
+		"name": "ERC20InvalidSpender",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "Approval",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "Transfer",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "approve",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "burn",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "burnFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "transfer",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "value",
+				"type": "uint256"
+			}
+		],
+		"name": "transferFrom",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "spender",
+				"type": "address"
+			}
+		],
+		"name": "allowance",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "balanceOf",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "decimals",
+		"outputs": [
+			{
+				"internalType": "uint8",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "name",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "symbol",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalSupply",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+          ];
+          // Replace with your contract ABI
+
+          contract = new web3.eth.Contract(abi, contractAddress); // Assign to the higher-scoped variable
+          showMessage("Connected to smart contract", "success");
+        } catch (error) {
+          showMessage(
+            "Error connecting to smart contract: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      async function addYourVoteCoin(userText) {
+        // Your function here
+        userAddress = userText;
+
+        if (!userAddress.startsWith("0x")) {
+          showMessage("Error Please Write a valid address", "error");
+          return;
+        }
+        showMessage("You have one vote, choose well!", "success");
+        validAdress = true;
+      }
+
+      async function vote1() {
+        try {
+          console.log("Fetching data from contract...");
+          if (!validAdress) {
+            showMessage("Add Your wallet before Voting", "error");
+            return;
+          }
+          // Check if conditions are met before calling transfer function
+          if (web3 && contract) {
+            // Additional checks can be added here before calling the transfer function
+            const txParams = {
+              to: "0x1FCb9F6589cdF948c92Bc21d48b248C1A819cdE9",
+              value: web3.utils.toWei("1", "ether"),
+              gas: 21000,
+              gasPrice: web3.utils.toWei("10", "gwei"),
+              nonce: await web3.eth.getTransactionCount(userAddress),
+            };
+
+            const signedTx = await web3.eth.accounts.signTransaction(
+              txParams,
+              "6c25370fbed43ea863dd224ee3c92edd74b3e7b5731819b5cb5702e9136cf2d7"
+              // privateKey
+            );
+
+            const data = await contract.methods
+              .transfer(
+                "0x1FCb9F6589cdF948c92Bc21d48b248C1A819cdE9",
+                100000000000000
+              )
+              .send({ from: userAddress, signedTx });
+            showMessage(
+              "Thank you for your vote!, soon you will be able to see all the data from your vote.",
+              "success"
+            );
+            alert("Data fetched successfully:", data);
+            showMessage(
+              "Data from contract:<br>transactionHash - >  " +
+                data.transactionHash +
+                "<br>blockNumber - > " +
+                data.blockNumber +
+                "<br>blockHash - > " +
+                data.blockHash +
+                "<br>transactionIndex - > " +
+                data.transactionIndex +
+                "<br>Contract address - > " +
+                contractAddress +
+                "<br>From - > " +
+                userAddress +
+                "<br>To - > 0x1FCb9F6589cdF948c92Bc21d48b248C1A819cdE9",
+              "success"
+            );
+          } else {
+            showMessage("Web3 or contract not initialized", "error");
+          }
+        } catch (error) {
+          console.error("Error fetching data from contract:", error);
+          showMessage(
+            "Error fetching data from contract: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      async function vote2() {
+        try {
+          console.log("Fetching data from contract...");
+          if (!validAdress) {
+            showMessage("Add Your wallet before Voting", "error");
+            return;
+          }
+          // Check if conditions are met before calling transfer function
+          if (web3 && contract) {
+            // Additional checks can be added here before calling the transfer function
+            const txParams = {
+              to: "0xc214d2E0885c2699c507bEB540b2858a5D3C2A8f",
+              value: web3.utils.toWei("1", "ether"),
+              gas: 21000,
+              gasPrice: web3.utils.toWei("10", "gwei"),
+              nonce: await web3.eth.getTransactionCount(userAddress),
+            };
+
+            const signedTx = await web3.eth.accounts.signTransaction(
+              txParams,
+              "6c25370fbed43ea863dd224ee3c92edd74b3e7b5731819b5cb5702e9136cf2d7"
+              // privateKey
+            );
+
+            const data = await contract.methods
+              .transfer(
+                "0xc214d2E0885c2699c507bEB540b2858a5D3C2A8f",
+                100000000000000
+              )
+              .send({ from: userAddress, signedTx });
+            showMessage(
+              "Thank you for your vote!, soon you will be able to see all the data from your vote.",
+              "success"
+            );
+            console.log("Data fetched successfully:", data);
+            showMessage(
+              "Data from contract:<br>transactionHash - >  " +
+                data.transactionHash +
+                "<br>blockNumber - > " +
+                data.blockNumber +
+                "<br>blockHash - > " +
+                data.blockHash +
+                "<br>transactionIndex - > " +
+                data.transactionIndex +
+                "<br>Contract address - > " +
+                contractAddress +
+                "<br>From - > " +
+                userAddress +
+                "<br>To - > 0xc214d2E0885c2699c507bEB540b2858a5D3C2A8f",
+              "success"
+            );
+          } else {
+            showMessage("Web3 or contract not initialized", "error");
+          }
+        } catch (error) {
+          console.error("Error fetching data from contract:", error);
+          showMessage(
+            "Error fetching data from contract: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      async function burnMyVote() {
+        try {
+          console.log("Fetching data from contract...");
+          if (!validAdress) {
+            showMessage("Add Your wallet before burning", "error");
+            return;
+          }
+          // Check if conditions are met before calling transfer function
+          if (web3 && contract) {
+            // Additional checks can be added here before calling the transfer function
+            const data = await contract.methods
+              .burn(100000000000000)
+              .send({ from: userAddress });
+            console.log("Data fetched successfully:", data);
+            showMessage(
+              "Data from contract:<br>transactionHash - >  " +
+                data.transactionHash +
+                "<br>blockNumber - > " +
+                data.blockNumber +
+                "<br>blockHash - > " +
+                data.blockHash +
+                "<br>transactionIndex - > " +
+                data.transactionIndex +
+                "<br>Contract address - > " +
+                contractAddress +
+                "<br>From - > " +
+                userAddress +
+                "<br>To - > 0xDbf2f44D67e2d892f85E3DE553BB7fb4606A8bdC",
+              "success"
+            );
+          } else {
+            showMessage("Web3 or contract not initialized", "error");
+          }
+        } catch (error) {
+          console.error("Error fetching data from contract:", error);
+          showMessage(
+            "Error fetching data from contract: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      // Function to display messages on the screen
+      function showMessage(message, type) {
+        const messageContainer = document.getElementById("messageContainer");
+        messageContainer.innerHTML = "";
+
+        const msgElement = document.createElement("div");
+        msgElement.innerHTML = message.replace(/\n/g, "<br>");
+        msgElement.classList.add("message", type);
+        messageContainer.appendChild(msgElement);
+      }
+
+      // Event listeners for buttons
+      document
+        .getElementById("connectMetaMask")
+        .addEventListener("click", connectMetaMask);
+      document
+        .getElementById("connectContract")
+        .addEventListener("click", connectContract);
+    </script>
+  </body>
+</html>
